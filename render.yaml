@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: bot-cartomante
+    env: python
+    buildCommand: ""
+    startCommand: "python cartomante_bot.py"
+    plan: free
