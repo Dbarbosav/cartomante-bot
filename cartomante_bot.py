@@ -1,100 +1,56 @@
-import random
-import logging
-import requests
 from flask import Flask, request, jsonify
-from datetime import datetime
+import requests
+import openai
 import pytz
+from datetime import datetime
 
 app = Flask(__name__)
 
-# Configuração de logging
-logging.basicConfig(
-    filename='historico_consultas.log',
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s %(message)s'
-)
+# Sua chave de API da OpenAI (você precisa gerar no site deles)
+openai.api_key = "SUA_API_KEY_AQUI"
 
-historico_cache = []
+# Função para gerar a resposta da IA
+def gerar_resposta_ia(pergunta_usuario, nome_usuario=None, data_nascimento=None):
+    prompt_base = f"""
+Você é um cartomante espiritualista muito sábio e acolhedor chamado Mestre Luz. 
+Seu objetivo é orientar espiritualmente quem te procura, respondendo perguntas com base na energia do universo, nas cartas e nas estrelas. 
+Seja sempre positivo, acolhedor e profundo nas respostas. 
+Fale como se estivesse realmente tirando cartas ou lendo o mapa da pessoa.
+Nome da pessoa: {nome_usuario if nome_usuario else "Desconhecido"}
+Data de nascimento: {data_nascimento if data_nascimento else "Não informado"}
+Pergunta: {pergunta_usuario}
+"""
+    response = openai.ChatCompletion.create(
+        model="gpt-4o",  # Ou "gpt-3.5-turbo" se quiser economizar
+        messages=[
+            {"role": "system", "content": prompt_base},
+            {"role": "user", "content": pergunta_usuario}
+        ],
+        max_tokens=400,
+        temperature=0.8,
+    )
 
-# Banco dos Arcanos Maiores com emojis para energia
-cartas_tarot = [
-    # cartas já adicionadas anteriormente...
-]
+    return response['choices'][0]['message']['content'].strip()
 
-def tirar_cartas(qtd=1):
-    return random.sample(cartas_tarot, qtd)
-
-def formatar_interpretacao(cartas, pergunta):
-    mensagens = []
-    for idx, carta in enumerate(cartas):
-        tema = ""
-        if idx == 0:
-            tema = "Passado"
-        elif idx == 1:
-            tema = "Presente"
-        elif idx == 2:
-            tema = "Futuro"
-        energia_emoji = "🌟" if carta['energia'] == 'positiva' else ("⚖️" if carta['energia'] == 'neutra' else "⚡")
-        mensagens.append(f"{tema}: {energia_emoji} *{carta['nome']}* - {carta['significado']}")
-    return f"🔮 Tiragem para a pergunta: '{pergunta}'\n" + "\n".join(mensagens)
-
+# Webhook do WhatsApp
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    if not request.is_json:
-        return jsonify({"erro": "Requisição deve ser JSON"}), 400
+    data = request.get_json()
 
-    dados = request.get_json()
-    numero = dados.get('numero')
-    pergunta = dados.get('mensagem', '').lower()
+    # Pegando a mensagem recebida
+    mensagem_usuario = data['messages'][0]['text']['body']
+    numero_cliente = data['messages'][0]['from']
 
-    if not pergunta.strip():
-        return jsonify({"erro": "Mensagem inválida ou vazia."}), 400
+    # (Opcional) Extrair nome e data se quiser captar do WhatsApp depois
+    nome_cliente = "Cliente"
+    data_nascimento_cliente = None  # Pode melhorar se pedir no fluxo inicial
 
-    if "ajuda" in pergunta:
-        ajuda_msg = ("🔮 Bem-vindo à sua consulta mística!\n"
-                     "Envie uma pergunta como:\n"
-                     "- 'tiragem completa' (3 cartas: passado, presente, futuro)\n"
-                     "- 'tiragem amor', 'tiragem trabalho', 'tiragem saúde'\n"
-                     "- Ou qualquer pergunta livre ✨")
-        return jsonify({"status": "ok", "mensagem": ajuda_msg})
+    resposta_gerada = gerar_resposta_ia(mensagem_usuario, nome_cliente, data_nascimento_cliente)
 
-    if any(t in pergunta for t in ["tiragem completa", "tiragem amor", "tiragem trabalho", "tiragem saúde"]):
-        cartas = tirar_cartas(3)
-    else:
-        cartas = tirar_cartas(1)
+    # Simular envio da resposta (trocar pela integração real do WhatsApp API que você estiver usando)
+    print(f"Mensagem para {numero_cliente}: {resposta_gerada}")
 
-    interpretacao = formatar_interpretacao(cartas, pergunta)
-    imagens = [carta['imagem'] for carta in cartas]
-
-    fuso_brasilia = pytz.timezone('America/Sao_Paulo')
-    timestamp = datetime.now(fuso_brasilia).isoformat()
-
-    resposta = {
-        "status": "ok",
-        "timestamp": timestamp,
-        "numero": numero,
-        "mensagem": interpretacao,
-        "imagens": imagens
-    }
-
-    historico_cache.append({
-        "numero": numero,
-        "pergunta": pergunta,
-        "cartas": [carta['nome'] for carta in cartas],
-        "data": timestamp
-    })
-    if len(historico_cache) > 100:
-        historico_cache.pop(0)
-
-    return jsonify(resposta)
-
-@app.route('/historico', methods=['GET'])
-def historico():
-    return jsonify({"status": "ok", "historico": historico_cache})
+    return jsonify({"status": "success"}), 200
 
 if __name__ == '__main__':
-    import sys
-    if "teste" in sys.argv:
-        print("Rodando em modo teste!")
-    else:
-        app.run(host='0.0.0.0', port=5000)
+    app.run(port=5000)
