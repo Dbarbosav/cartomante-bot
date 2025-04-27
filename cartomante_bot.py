@@ -16,6 +16,21 @@ cartomantes_clientes = {}
 perguntas_gratis_clientes = {}
 coleta_dados_mapa = {}
 
+def enviar_mensagem(numero, mensagem):
+    instancia_id = "instance116881"
+    token = "9k3jgki7mpfbq3j9"
+    url = f"https://api.ultramsg.com/{instancia_id}/messages/chat"
+
+    payload = {
+        "token": token,
+        "to": numero,
+        "body": mensagem
+    }
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+    response = requests.post(url, data=payload, headers=headers)
+    print(f"Resposta do envio: {response.text}")
+
 bordoes_pai_oswaldo = [
     "Meu filho, o destino é claro para aqueles que têm coragem.",
     "Vejo que a sua jornada exige fé e ação imediata.",
@@ -88,7 +103,7 @@ def webhook():
                 "2⃣ Dona Margareth - Acolhimento e luz espiritual\n\n"
                 "Responda com o número ou o nome do seu cartomante escolhido. 🔮"
             )
-        print(f"Mensagem para {numero_cliente}: {resposta_gerada}")
+        enviar_mensagem(numero_cliente, resposta_gerada)
         return jsonify({"status": "success"}), 200
 
     if numero_cliente in coleta_dados_mapa:
@@ -111,7 +126,7 @@ def webhook():
             prompt_mapa = f"Gere um Mapa Astral interpretativo para:\nNome: {dados['nome']}\nData: {dados['data']}\nHora: {dados['hora']}\nCidade: {dados['cidade']}"
             resposta_gerada = gerar_resposta_ia(prompt_mapa)
 
-        print(f"Mensagem para {numero_cliente}: {resposta_gerada}")
+        enviar_mensagem(numero_cliente, resposta_gerada)
         return jsonify({"status": "success"}), 200
 
     if perguntas_gratis_clientes.get(numero_cliente, 0) < 1:
@@ -132,7 +147,7 @@ def webhook():
         else:
             resposta_gerada = menu_pacotes
 
-    print(f"Mensagem para {numero_cliente}: {resposta_gerada}")
+    enviar_mensagem(numero_cliente, resposta_gerada)
     return jsonify({"status": "success"}), 200
 
 if __name__ == '__main__':
