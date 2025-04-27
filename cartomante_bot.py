@@ -79,13 +79,13 @@ def gerar_resposta_ia(prompt_usuario):
 def webhook():
     data = request.get_json()
 
-    if not data or 'data' not in data or 'body' not in data['data']:
-        print("🔔 Webhook recebido mas sem 'data' ou 'body'. Ignorado.")
+    if not data or 'body' not in data:
+        print("🔔 Webhook recebido mas sem 'body'. Ignorado.")
         return jsonify({"status": "ignored"}), 200
 
-    mensagem_usuario = data['data']['body'].strip()
-    numero_cliente = data['data']['from']
-    nome_cliente = data['data'].get('senderName', 'Cliente')
+    mensagem_usuario = data['body'].strip()
+    numero_cliente = data['from']
+    nome_cliente = data.get('senderName', 'Cliente')
 
     if numero_cliente not in cartomantes_clientes:
         if mensagem_usuario in ["1", "Pai Oswaldo"]:
