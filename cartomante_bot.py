@@ -1,5 +1,8 @@
 from flask import Flask, request, jsonify
+import requests
 import openai
+import pytz
+from datetime import datetime
 import os
 import random
 
@@ -60,17 +63,17 @@ def gerar_resposta_ia(prompt_usuario):
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.get_json()
-    mensagem_usuario = data['messages'][0]['text']['body'].strip()
-    numero_cliente = data['messages'][0]['from']
-    nome_cliente = data['messages'][0].get('sender', {}).get('name', 'Cliente')
+    mensagem_usuario = data['body'].strip()
+    numero_cliente = data['from']
+    nome_cliente = data.get('senderName', 'Cliente')
 
     if numero_cliente not in cartomantes_clientes:
         if mensagem_usuario in ["1", "Pai Oswaldo"]:
             cartomantes_clientes[numero_cliente] = "Pai Oswaldo"
-            resposta_gerada = "✨ Seja muito bem-vindo(a)! Escolheu Pai Oswaldo. Você tem direito a 1 pergunta gratuita. Faça sua pergunta agora!"
+            resposta_gerada = f"✨ Seja muito bem-vindo(a)! Escolheu Pai Oswaldo. Você tem direito a 1 pergunta gratuita. Faça sua pergunta agora!"
         elif mensagem_usuario in ["2", "Dona Margareth"]:
             cartomantes_clientes[numero_cliente] = "Dona Margareth"
-            resposta_gerada = "✨ Seja muito bem-vindo(a)! Escolheu Dona Margareth. Você tem direito a 1 pergunta gratuita. Faça sua pergunta agora!"
+            resposta_gerada = f"✨ Seja muito bem-vindo(a)! Escolheu Dona Margareth. Você tem direito a 1 pergunta gratuita. Faça sua pergunta agora!"
         else:
             resposta_gerada = (
                 "✨ Seja muito bem-vindo(a) à nossa jornada espiritual!\n\n"
@@ -116,10 +119,8 @@ def webhook():
     else:
         if mensagem_usuario.lower() == "mapa astral":
             coleta_dados_mapa[numero_cliente] = {'etapa': 'nome'}
-            resposta_gerada = (
-                "🌟 Para realizar sua leitura do Mapa Astral, preciso de algumas informações:\n"
-                "1⃣ Seu nome completo\n2⃣ Sua data de nascimento\n3⃣ Seu horário de nascimento (se souber)\n4⃣ Cidade onde nasceu"
-            )
+            resposta_gerada = ("🌟 Para realizar sua leitura do Mapa Astral, preciso de algumas informações:\n"
+                               "1⃣ Seu nome completo\n2⃣ Sua data de nascimento\n3⃣ Seu horário de nascimento (se souber)\n4⃣ Cidade onde nasceu")
         elif mensagem_usuario.lower() == "tiragem especial":
             prompt_analise = "Realize uma tiragem especial de cartas + análise da personalidade espiritual do cliente."
             resposta_gerada = gerar_resposta_ia(prompt_analise)
