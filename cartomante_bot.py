@@ -63,9 +63,9 @@ def gerar_resposta_ia(prompt_usuario):
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.get_json()
-    mensagem_usuario = data['body'].strip()
-    numero_cliente = data['from']
-    nome_cliente = data.get('senderName', 'Cliente')
+    mensagem_usuario = data['data']['body'].strip()
+    numero_cliente = data['data']['from']
+    nome_cliente = data['data'].get('senderName', 'Cliente')
 
     if numero_cliente not in cartomantes_clientes:
         if mensagem_usuario in ["1", "Pai Oswaldo"]:
