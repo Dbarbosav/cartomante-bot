@@ -1,7 +1,14 @@
 services:
   - type: web
-    name: bot-cartomante
+    name: cartomante-pro
     env: python
-    buildCommand: ""
-    startCommand: "python cartomante_bot.py"
     plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python cartomante_bot.py"
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: WPP_SERVER_URL
+        sync: false
+      - key: WPP_SESSION_NAME
+        sync: false
