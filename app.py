@@ -3,10 +3,9 @@ import requests
 
 app = Flask(__name__)
 
-# SEU TOKEN AQUI 👇 (cola o seu token direto)
-TOKEN = "YflrQ8qtahEndXwrULX79EnvgSTCjfj"
+# Token correto da Whapi
+TOKEN = "YflrQ8qtahEndXwrULX79EnvgSTCtjfi"
 
-# URL da API Whapi
 API_URL = "https://gate.whapi.cloud"
 
 @app.route("/", methods=["GET"])
@@ -23,7 +22,6 @@ def webhook():
             chat_id = message['chatId']
             text = message.get('text', {}).get('body', '')
 
-            # Exemplo simples: responder a qualquer mensagem recebida
             resposta = f"Olá! Você disse: {text}"
             send_message(chat_id, resposta)
 
