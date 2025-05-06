@@ -1,75 +1,71 @@
-from flask import Flask, request, jsonify
-import requests
 import os
-from openai import OpenAI
+import requests
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Pegando as variáveis de ambiente
-WHAPI_TOKEN = os.getenv('WHAPI_TOKEN')
-WHAPI_URL = os.getenv('WHAPI_URL', 'https://gate.whapi.cloud')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+WHAPI_TOKEN = os.getenv("WHAPI_TOKEN")
+WHAPI_URL = "https://api.whapi.cloud/messages/sendText"
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+HEADERS_WHAPI = {
+    "Authorization": f"Bearer {WHAPI_TOKEN}",
+    "Content-Type": "application/json"
+}
 
-def send_whatsapp_message(to_number, message):
-    url = f"{WHAPI_URL}/messages/text"
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {WHAPI_TOKEN}'
-    }
-    payload = {
-        'to': to_number,
-        'type': 'text',
-        'text': {
-            'body': message
-        }
-    }
-    try:
-        response = requests.post(url, headers=headers, json=payload)
-        print(f'Resposta Whapi: {response.status_code} {response.text}')
-    except Exception as e:
-        print(f"Erro ao enviar mensagem: {e}")
+HEADERS_GROQ = {
+    "Authorization": f"Bearer {GROQ_API_KEY}",
+    "Content-Type": "application/json"
+}
 
-@app.route('/webhook', methods=['POST'])  # 🔥 Corrigido aqui
+@app.route("/webhook", methods=["POST"])
 def webhook():
-    data = request.json
-    print(f"Recebido: {data}")
+    data = request.get_json()
 
-    if 'messages' in data:
-        for message_data in data['messages']:
-            from_number = message_data.get('from')
-            user_message = message_data.get('text', {}).get('body')
+    if not data or 'messages' not in data:
+        return jsonify({"error": "No message received"}), 400
 
-            if not user_message:
-                print("Mensagem recebida sem corpo de texto.")
-                continue
+    message_info = data['messages'][0]
+    chat_id = message_info.get('chat_id')
+    user_message = message_info.get('text', {}).get('body')
 
-            # Prompt personalizado para Cartomante
-            prompt = (
-                f"Você é um cartomante espiritualista. Aja como se fosse o Pai Oswaldo ou Dona Margareth, "
-                f"respondendo de forma mística, acolhedora e detalhada sobre a dúvida: '{user_message}'. "
-                f"Inclua também reflexões e conselhos espirituais."
-            )
+    if not chat_id or not user_message:
+        return jsonify({"error": "Invalid message format"}), 400
 
-            try:
-                completion = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "Você é um cartomante profissional."},
-                        {"role": "user", "content": prompt}
-                    ]
-                )
-                response_text = completion.choices[0].message.content.strip()
+    print(f"Mensagem recebida de {chat_id}: {user_message}")
 
-            except Exception as e:
-                print(f"Erro OpenAI: {e}")
-                response_text = "Desculpe, tivemos um problema ao consultar os espíritos agora. Tente novamente mais tarde."
+    prompt = f"Você é uma cartomante mística chamada Dona Margareth. Responda de forma espiritualizada e acolhedora. Pergunta: {user_message}"
 
-            # Envia a resposta
-            send_whatsapp_message(from_number, response_text)
+    payload_groq = {
+        "model": "mixtral-8x7b-32768",
+        "messages": [
+            {"role": "system", "content": "Você é uma cartomante experiente."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.7
+    }
 
-    return jsonify({'status': 'mensagem recebida'})
+    response_groq = requests.post(GROQ_API_URL, headers=HEADERS_GROQ, json=payload_groq)
 
-if __name__ == '__main__':
-    app.run(port=5000)
+    if response_groq.status_code != 200:
+        print(f"Erro Groq: {response_groq.status_code} - {response_groq.text}")
+        reply_text = "Desculpe, estou com dificuldades técnicas no momento. 🙏"
+    else:
+        groq_data = response_groq.json()
+        reply_text = groq_data["choices"][0]["message"]["content"].strip()
+
+    payload_whapi = {
+        "to": chat_id,
+        "text": reply_text
+    }
+
+    response_whapi = requests.post(WHAPI_URL, headers=HEADERS_WHAPI, json=payload_whapi)
+
+    if response_whapi.status_code != 200:
+        print(f"Erro Whapi: {response_whapi.status_code} - {response_whapi.text}")
+
+    return jsonify({"status": "mensagem enviada"}), 200
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
