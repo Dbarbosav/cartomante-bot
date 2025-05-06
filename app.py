@@ -5,7 +5,7 @@ from openai import OpenAI
 
 app = Flask(__name__)
 
-# ⚠️ Pegando as variáveis de ambiente (adicione no Render depois)
+# Pegando as variáveis de ambiente
 WHAPI_TOKEN = os.getenv('WHAPI_TOKEN')
 WHAPI_URL = os.getenv('WHAPI_URL', 'https://gate.whapi.cloud')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
@@ -25,24 +25,27 @@ def send_whatsapp_message(to_number, message):
             'body': message
         }
     }
-    response = requests.post(url, headers=headers, json=payload)
-    print(f'Resposta Whapi: {response.status_code} {response.text}')
-    return response.json()
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        print(f'Resposta Whapi: {response.status_code} {response.text}')
+    except Exception as e:
+        print(f"Erro ao enviar mensagem: {e}")
 
-@app.route('/', methods=['POST'])
+@app.route('/webhook', methods=['POST'])  # 🔥 Corrigido aqui
 def webhook():
     data = request.json
     print(f"Recebido: {data}")
 
     if 'messages' in data:
         for message_data in data['messages']:
-            from_number = message_data['from']
-            user_message = message_data.get('text', {}).get('body', '').strip()
+            from_number = message_data.get('from')
+            user_message = message_data.get('text', {}).get('body')
 
             if not user_message:
-                continue  # Ignora se não for mensagem de texto
+                print("Mensagem recebida sem corpo de texto.")
+                continue
 
-            # 👇 Prompt personalizado para Cartomante com Pai Oswaldo e Dona Margareth
+            # Prompt personalizado para Cartomante
             prompt = (
                 f"Você é um cartomante espiritualista. Aja como se fosse o Pai Oswaldo ou Dona Margareth, "
                 f"respondendo de forma mística, acolhedora e detalhada sobre a dúvida: '{user_message}'. "
@@ -63,7 +66,7 @@ def webhook():
                 print(f"Erro OpenAI: {e}")
                 response_text = "Desculpe, tivemos um problema ao consultar os espíritos agora. Tente novamente mais tarde."
 
-            # Envia a resposta para o cliente
+            # Envia a resposta
             send_whatsapp_message(from_number, response_text)
 
     return jsonify({'status': 'mensagem recebida'})
