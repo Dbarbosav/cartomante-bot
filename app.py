@@ -11,19 +11,16 @@ WHAPI_URL = 'https://gate.whapi.cloud'
 def webhook():
     data = request.json
 
-    # Debug: printar tudo que chegou para conferir
     print('Recebido:', json.dumps(data, indent=2))
 
-    # Conferir se é mensagem de texto
     if 'messages' in data.get('event', {}):
         message_data = data['event']['messages'][0]
-        chat_id = message_data.get('chat_id')
+        chat_id = message_data.get('from')  # <<< TROCA AQUI
         body = message_data.get('text', {}).get('body')
 
         if chat_id and body:
             reply_text = f"🔮 Recebi sua mensagem: {body}. Logo mais respondo!"
 
-            # Enviar a resposta
             response = requests.post(
                 f'{WHAPI_URL}/messages/text',
                 headers={'Authorization': f'Bearer {WHAPI_TOKEN}', 'Content-Type': 'application/json'},
