@@ -17,25 +17,26 @@ def webhook():
     print("Recebido:", data)
 
     if data.get('event', {}).get('type') == 'messages':
-        message = data.get('messages', {})
-        chat_id = message.get('chat_id')
-        text = message.get('text')
+        messages = data.get('messages', [])
+        for message in messages:
+            chat_id = message.get('chat_id')
+            text = message.get('text')
 
-        if chat_id and text:
-            # Resposta automática
-            resposta = f"Recebi sua mensagem: {text}. Vou te responder em breve! 🔮"
+            if chat_id and text:
+                # Resposta automática
+                resposta = f"🔮 Recebi sua mensagem: {text}. Logo mais respondo!"
 
-            payload = {
-                'to': chat_id,
-                'body': resposta
-            }
-            headers = {
-                'Authorization': f'Bearer {API_TOKEN}',
-                'Content-Type': 'application/json'
-            }
+                payload = {
+                    'to': chat_id,
+                    'body': resposta
+                }
+                headers = {
+                    'Authorization': f'Bearer {API_TOKEN}',
+                    'Content-Type': 'application/json'
+                }
 
-            r = requests.post(API_URL, json=payload, headers=headers)
-            print('Enviado:', r.status_code, r.text)
+                r = requests.post(API_URL, json=payload, headers=headers)
+                print('Enviado:', r.status_code, r.text)
 
     return jsonify({'status': 'ok'})
 
