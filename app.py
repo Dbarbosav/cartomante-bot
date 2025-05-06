@@ -1,91 +1,72 @@
-import os
-import time
-import json
 from flask import Flask, request, jsonify
 import requests
-import openai
+import os
+from openai import OpenAI
 
 app = Flask(__name__)
 
-# Configurações
-WHAPI_TOKEN = 'YflrQ8qtahEndXwrULX79EnvgSTCtjfi'
-OPENAI_API_KEY = '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'
-openai.api_key = OPENAI_API_KEY
+# ⚠️ Pegando as variáveis de ambiente (adicione no Render depois)
+WHAPI_TOKEN = os.getenv('WHAPI_TOKEN')
+WHAPI_URL = os.getenv('WHAPI_URL', 'https://gate.whapi.cloud')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
-WHAPI_URL = 'https://gate.whapi.cloud'
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-# Função para enviar mensagem via Whapi
 def send_whatsapp_message(to_number, message):
-    url = f"{WHAPI_URL}/sendMessageText"
+    url = f"{WHAPI_URL}/messages/text"
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {WHAPI_TOKEN}'
     }
     payload = {
         'to': to_number,
-        'body': message
+        'type': 'text',
+        'text': {
+            'body': message
+        }
     }
     response = requests.post(url, headers=headers, json=payload)
+    print(f'Resposta Whapi: {response.status_code} {response.text}')
     return response.json()
 
-# Função para gerar resposta da OpenAI
-def generate_cartomante_response(user_message, cartomante_name):
-    prompt = f"""
-    Você é um cartomante chamado {cartomante_name}, com tom místico e acolhedor. Responda a pergunta abaixo de forma intuitiva, usando sua sabedoria espiritual, e seja detalhista para parecer uma consulta real.
-
-    Pergunta: {user_message}
-
-    Resposta:
-    """
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": prompt}]
-        )
-        reply = response['choices'][0]['message']['content']
-        return reply.strip()
-    except Exception as e:
-        return "Desculpe, estou tendo dificuldades para acessar meu plano astral agora. Tente novamente em breve."
-
-@app.route('/', methods=['GET'])
-def home():
-    return 'Cartomante Bot Online!'
-
-@app.route('/webhook', methods=['POST'])
+@app.route('/', methods=['POST'])
 def webhook():
-    data = request.get_json()
-    print(json.dumps(data, indent=2))
+    data = request.json
+    print(f"Recebido: {data}")
 
-    try:
-        messages = data.get('messages')
-        if not messages:
-            return jsonify({'status': 'no_messages'})
+    if 'messages' in data:
+        for message_data in data['messages']:
+            from_number = message_data['from']
+            user_message = message_data.get('text', {}).get('body', '').strip()
 
-        for message in messages:
-            sender = message['from']
-            text = message['text']['body']
+            if not user_message:
+                continue  # Ignora se não for mensagem de texto
 
-            # Simula um pequeno delay para parecer realista
-            time.sleep(2)
+            # 👇 Prompt personalizado para Cartomante com Pai Oswaldo e Dona Margareth
+            prompt = (
+                f"Você é um cartomante espiritualista. Aja como se fosse o Pai Oswaldo ou Dona Margareth, "
+                f"respondendo de forma mística, acolhedora e detalhada sobre a dúvida: '{user_message}'. "
+                f"Inclua também reflexões e conselhos espirituais."
+            )
 
-            # Decide quem vai responder (Pai Oswaldo ou Dona Margareth)
-            if 'oswaldo' in text.lower():
-                cartomante = 'Pai Oswaldo'
-            elif 'margareth' in text.lower():
-                cartomante = 'Dona Margareth'
-            else:
-                cartomante = 'Dona Margareth'  # Padrão
+            try:
+                completion = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "Você é um cartomante profissional."},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                response_text = completion.choices[0].message.content.strip()
 
-            reply = generate_cartomante_response(text, cartomante)
-            
-            # Envia a resposta
-            send_whatsapp_message(sender, reply)
+            except Exception as e:
+                print(f"Erro OpenAI: {e}")
+                response_text = "Desculpe, tivemos um problema ao consultar os espíritos agora. Tente novamente mais tarde."
 
-        return jsonify({'status': 'success'})
+            # Envia a resposta para o cliente
+            send_whatsapp_message(from_number, response_text)
 
-    except Exception as e:
-        print(f'Erro: {e}')
-        return jsonify({'status': 'error', 'message': str(e)})
+    return jsonify({'status': 'mensagem recebida'})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=5000)
