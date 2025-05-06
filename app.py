@@ -18,7 +18,7 @@ def webhook():
     if 'messages' in data.get('event', {}):
         message_data = data['event']['messages'][0]
         chat_id = message_data.get('chat_id')
-        body = message_data.get('text')
+        body = message_data.get('text', {}).get('body')
 
         if chat_id and body:
             reply_text = f"🔮 Recebi sua mensagem: {body}. Logo mais respondo!"
