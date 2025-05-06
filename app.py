@@ -13,10 +13,12 @@ def webhook():
 
     print('Recebido:', json.dumps(data, indent=2))
 
-    if 'messages' in data.get('event', {}):
-        message_data = data['event']['messages'][0]
-        chat_id = message_data.get('from')  # <<< TROCA AQUI
+    if 'messages' in data:
+        message_data = data['messages'][0]
+        chat_id = message_data.get('from')
         body = message_data.get('text', {}).get('body')
+
+        print(f'chat_id: {chat_id}, body: {body}')  # 👈 Para debug
 
         if chat_id and body:
             reply_text = f"🔮 Recebi sua mensagem: {body}. Logo mais respondo!"
