@@ -7,7 +7,7 @@ app = Flask(__name__)
 # Variáveis de ambiente
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 WHAPI_TOKEN = os.getenv("WHAPI_TOKEN")
-WHAPI_URL = os.getenv("WHAPI_URL", "https://wa.whapi.cloud/messages/sendText")
+WHAPI_URL = os.getenv("WHAPI_URL", "https://gate.whapi.cloud/messages/sendText")
 GROQ_URL = os.getenv("GROQ_URL", "https://api.groq.com/openai/v1/chat/completions")
 
 # Função para gerar resposta da Groq
@@ -17,9 +17,12 @@ def gerar_resposta_groq(mensagem_usuario):
         "Content-Type": "application/json"
     }
     data = {
-        "model": "llama3-8b-8192",  # Modelo atualizado e suportado
+        "model": "llama3-8b-8192",  # Modelo atualizado
         "messages": [
-            {"role": "system", "content": "Você é um cartomante experiente chamado Pai Oswaldo ou Dona Margareth."},
+            {"role": "system", "content": (
+                "Você é um cartomante experiente chamado Pai Oswaldo ou Dona Margareth. "
+                "Responda de forma espiritualizada e acolhedora, simulando uma leitura de cartas ou orientação."
+            )},
             {"role": "user", "content": mensagem_usuario}
         ],
         "temperature": 0.7
