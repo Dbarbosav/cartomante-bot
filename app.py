@@ -3,42 +3,41 @@ import requests
 
 app = Flask(__name__)
 
-# Token correto da Whapi
-TOKEN = "YflrQ8qtahEndXwrULX79EnvgSTCtjfi"
+# Seu token da Whapi
+API_TOKEN = 'YflrQ8qtahEndXwrULX79EnvgSTCtjfi'
+API_URL = 'https://gate.whapi.cloud/messages/text'
 
-API_URL = "https://gate.whapi.cloud"
-
-@app.route("/", methods=["GET"])
+@app.route('/')
 def home():
-    return "Cartomante Bot online!"
+    return 'Cartomante bot rodando com sucesso!'
 
-@app.route("/webhook", methods=["POST"])
+@app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
     print("Recebido:", data)
 
-    if data and 'messages' in data:
-        for message in data['messages']:
-            chat_id = message['chatId']
-            text = message.get('text', {}).get('body', '')
+    if data.get('event', {}).get('type') == 'messages':
+        message = data.get('messages', {})
+        chat_id = message.get('chat_id')
+        text = message.get('text')
 
-            resposta = f"Olá! Você disse: {text}"
-            send_message(chat_id, resposta)
+        if chat_id and text:
+            # Resposta automática
+            resposta = f"Recebi sua mensagem: {text}. Vou te responder em breve! 🔮"
 
-    return jsonify({"status": "success"}), 200
+            payload = {
+                'to': chat_id,
+                'body': resposta
+            }
+            headers = {
+                'Authorization': f'Bearer {API_TOKEN}',
+                'Content-Type': 'application/json'
+            }
 
-def send_message(chat_id, text):
-    url = f"{API_URL}/message/text"
-    payload = {
-        "to": chat_id,
-        "body": text
-    }
-    headers = {
-        "Authorization": f"Bearer {TOKEN}",
-        "Content-Type": "application/json"
-    }
-    response = requests.post(url, json=payload, headers=headers)
-    print(f"Mensagem enviada: {response.status_code}, {response.text}")
+            r = requests.post(API_URL, json=payload, headers=headers)
+            print('Enviado:', r.status_code, r.text)
 
-if __name__ == "__main__":
-    app.run(port=5000)
+    return jsonify({'status': 'ok'})
+
+if __name__ == '__main__':
+    app.run(debug=True)
